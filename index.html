@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shreekumar Travels - Daily Bus Tracking</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfeff',
+                            100: '#cffaff',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#164e63',
+                        },
+                        darkbg: '#0a0d14',
+                        cardbg: 'rgba(18, 24, 38, 0.75)'
+                    },
+                    fontFamily: {
+                        ndot: ['"Ndot 55"', 'Space Grotesk', 'monospace', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts fallback -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom Ndot 55 font declaration */
+        @font-face {
+            font-family: 'Ndot 55';
+            src: url('Ndot 55/Web Fonts/5f21b8d13dad527377311ec2d5388bdf.woff2') format('woff2'),
+                 url('Ndot 55/Ndot 55.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        .font-ndot {
+            font-family: 'Ndot 55', 'Space Grotesk', monospace;
+            letter-spacing: 0.05em;
+        }
+
+        body {
+            background-color: #0a0d14;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glass-panel {
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(22, 30, 48, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1);
+        }
+
+        /* Animated LED Status pulse */
+        .led-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .led-green { background-color: #10b981; box-shadow: 0 0 10px #10b981; }
+        .led-orange { background-color: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+        .led-blue { background-color: #06b6d4; box-shadow: 0 0 10px #06b6d4; }
+        .led-red { background-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0d14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div>
+        <!-- HEADER -->
+        <header class="sticky top-0 z-40 glass-panel border-b border-gray-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-gradient-to-br from-cyan-500 to-blue-600 p-2.5 rounded-xl shadow-lg shadow-cyan-500/20 text-black">
+                        <i class="fa-solid fa-bus text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-ndot text-xl sm:text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 uppercase">
+                            Shreekumar Travels
+                        </h1>
+                        <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live Fleet Status & Tracking
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Clock & Admin Toggle -->
+                <div class="flex items-center space-x-3 sm:space-x-5">
+                    <!-- Dynamic Live Clock -->
+                    <div class="hidden sm:block text-right">
+                        <div id="liveClock" class="font-ndot text-lg text-cyan-400">00:00:00 AM</div>
+                        <div id="liveDate" class="text-xs text-gray-400">Loading date...</div>
+                    </div>
+
+                    <!-- Admin Lock/Unlock Button -->
+                    <button id="adminToggleBtn" onclick="toggleAdminModal()" class="flex items-center space-x-2 bg-gray-800/80 hover:bg-cyan-950/50 text-gray-300 hover:text-cyan-400 border border-gray-700 hover:border-cyan-500/50 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition duration-200">
+                        <i id="adminLockIcon" class="fa-solid fa-lock text-cyan-400"></i>
+                        <span id="adminBtnText" class="hidden sm:inline">Admin Login</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- STATS / QUICK SUMMARY BAR -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+                <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-gray-400 uppercase tracking-wider font-medium">Active Buses Today</div>
+                        <div id="statActiveBuses" class="font-ndot text-2xl text-cyan-400 mt-1">0</div>
+                    </div>
+                    <i class="fa-solid fa-bus-simple text-gray-600 text-2xl"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-gray-400 uppercase tracking-wider font-medium">Main Route</div>
+                        <div class="font-ndot text-sm text-emerald-400 mt-1">Sirsi ➔ Bengaluru</div>
+                    </div>
+                    <i class="fa-solid fa-route text-gray-600 text-2xl"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-gray-400 uppercase tracking-wider font-medium">On-Time Services</div>
+                        <div id="statOnTime" class="font-ndot text-2xl text-emerald-400 mt-1">0</div>
+                    </div>
+                    <i class="fa-solid fa-clock-check text-gray-600 text-2xl"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-gray-400 uppercase tracking-wider font-medium">Admin Mode</div>
+                        <div id="statAdminStatus" class="font-ndot text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 inline-block mt-1">LOCKED</div>
+                    </div>
+                    <i class="fa-solid fa-user-shield text-gray-600 text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- SEARCH AND CONTROLS BAR -->
+            <div class="glass-panel p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="renderBusCards()" placeholder="Search by Route No, Bus No, or Status..." class="w-full bg-gray-900/90 text-sm text-gray-200 placeholder-gray-500 rounded-xl pl-10 pr-4 py-2.5 border border-gray-700/70 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500">
+                </div>
+
+                <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-end">
+                    <span class="text-xs text-gray-400">Filter Status:</span>
+                    <select id="statusFilter" onchange="renderBusCards()" class="bg-gray-900/90 text-xs sm:text-sm text-gray-200 rounded-xl px-3 py-2 border border-gray-700 focus:outline-none focus:border-cyan-500">
+                        <option value="ALL">All Statuses</option>
+                        <option value="On Time">On Time</option>
+                        <option value="Delayed">Delayed</option>
+                        <option value="Departed">Departed Sirsi</option>
+                        <option value="En-Route">En-Route</option>
+                    </select>
+
+                    <button id="addBusBtn" onclick="openBusModal()" class="hidden bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold px-4 py-2 rounded-xl text-xs sm:text-sm transition duration-200 flex items-center gap-1.5 shadow-lg shadow-cyan-500/20">
+                        <i class="fa-solid fa-plus"></i> Add New Bus
+                    </button>
+                </div>
+            </div>
+
+            <!-- BUS CARDS LIST GRID -->
+            <div class="mb-4 flex justify-between items-center px-1">
+                <h2 class="text-lg font-semibold text-gray-200 flex items-center gap-2">
+                    <i class="fa-solid fa-location-crosshairs text-cyan-400"></i> Active Bus Services Today
+                </h2>
+                <span id="routeCountTag" class="text-xs font-ndot bg-gray-800 text-cyan-400 px-2.5 py-1 rounded-full border border-gray-700">0 Routes</span>
+            </div>
+
+            <div id="busCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Bus cards will be injected here dynamically -->
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div id="emptyState" class="hidden text-center py-16 glass-panel rounded-3xl">
+                <i class="fa-solid fa-bus text-5xl text-gray-700 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-300">No buses found</h3>
+                <p class="text-xs text-gray-500 mt-1">Try adjusting your search criteria or add a new bus from Admin mode.</p>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-gray-800 mt-16 py-6 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+                <span class="font-ndot text-cyan-400 font-bold">SHREEKUMAR TRAVELS</span> &copy; 2026. Daily Operations Tracking System.
+            </div>
+            <div class="flex items-center space-x-4">
+                <span>Sirsi Head Office</span>
+                <span>•</span>
+                <span>Bengaluru Hub</span>
+                <span>•</span>
+                <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> Live GPS Sync</span>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- MODAL 1: ADMIN LOGIN -->
+    <div id="adminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border border-cyan-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+            <button onclick="toggleAdminModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 text-cyan-400 text-2xl">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3 class="font-ndot text-xl text-white">Admin Access</h3>
+                <p class="text-xs text-gray-400 mt-1">Enter your admin PIN code to edit schedules and tracking links.</p>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">ADMIN PIN CODE</label>
+                    <input type="password" id="adminPinInput" placeholder="Default PIN: 1234" required class="w-full bg-gray-900 border border-gray-700 text-center text-xl tracking-widest text-cyan-400 rounded-xl py-3 focus:outline-none focus:border-cyan-500 font-ndot">
+                </div>
+                <div id="adminErrorMsg" class="text-xs text-red-400 text-center hidden">
+                    <i class="fa-solid fa-circle-exclamation"></i> Incorrect PIN code. Try again.
+                </div>
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold py-3 rounded-xl transition duration-200">
+                    Unlock Admin Panel
+                </button>
+            </form>
+            <div class="mt-4 text-center">
+                <p class="text-[11px] text-gray-500">Default password is <code class="bg-gray-800 text-cyan-300 px-1.5 py-0.5 rounded">1234</code></p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL 2: ADD / EDIT BUS SCHEDULER -->
+    <div id="busFormModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="glass-panel border border-cyan-500/30 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
+            <button onclick="closeBusModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="mb-6">
+                <h3 id="formModalTitle" class="font-ndot text-xl text-cyan-400 flex items-center gap-2">
+                    <i class="fa-solid fa-bus-simple"></i> Add Today's Bus Schedule
+                </h3>
+                <p class="text-xs text-gray-400 mt-1">Configure route timing, status and secret tracking link.</p>
+            </div>
+
+            <form onsubmit="saveBusSchedule(event)" class="space-y-4">
+                <input type="hidden" id="editBusId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Route No.</label>
+                        <input type="text" id="routeNoInput" placeholder="e.g. RT-01" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none font-ndot">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Bus Vehicle No. (Today)</label>
+                        <input type="text" id="busNoInput" placeholder="e.g. KA 31 F 1234" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none uppercase">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Route Description / Stoppages</label>
+                    <input type="text" id="routeNameInput" placeholder="e.g. Sirsi ➔ Haveri ➔ Tumakuru ➔ Bengaluru" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Departure Time (Sirsi)</label>
+                        <input type="time" id="sirsiTimeInput" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Arrival Time (Bengaluru 1st Stop)</label>
+                        <input type="time" id="bengaluruTimeInput" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Running Status Category</label>
+                        <select id="statusCategoryInput" class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                            <option value="On Time">On Time</option>
+                            <option value="Delayed">Delayed</option>
+                            <option value="Departed">Departed Sirsi</option>
+                            <option value="En-Route">En-Route</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Live Status Note / Delay Details</label>
+                        <input type="text" id="statusDetailInput" placeholder="e.g. On Time or Delayed 20 mins near Tumakuru" required class="w-full bg-gray-900 border border-gray-700 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-cyan-400 mb-1 font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-eye-slash"></i> Secret Live Tracking URL (Hidden from viewers)
+                    </label>
+                    <input type="url" id="trackingUrlInput" placeholder="https://maps.google.com/..." required class="w-full bg-gray-900 border border-cyan-500/40 text-sm text-gray-200 rounded-xl p-2.5 focus:border-cyan-500 focus:outline-none">
+                    <p class="text-[11px] text-gray-500 mt-1">This link is masked. Passengers clicking "Track Live Bus Location" will be seamlessly redirected to this link.</p>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeBusModal()" class="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold rounded-xl text-sm">Save Bus Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Initial Sample Data for Shreekumar Travels
+        const initialBusData = [
+            {
+                id: "bus_1",
+                routeNo: "RT-01",
+                routeName: "Sirsi ➔ Haveri ➔ Tumakuru ➔ Bengaluru (Goraguntepalya)",
+                busNo: "KA 31 F 8899",
+                sirsiTime: "21:30",
+                bengaluruTime: "05:30",
+                statusCategory: "On Time",
+                statusDetail: "On Time - Departing Sirsi Stand",
+                trackingUrl: "https://maps.google.com/?q=14.6195,74.8354"
+            },
+            {
+                id: "bus_2",
+                routeNo: "RT-02 EX",
+                routeName: "Sirsi ➔ Siddapur ➔ Sagara ➔ Bengaluru (Yeshwantpur)",
+                busNo: "KA 31 F 9002",
+                sirsiTime: "22:00",
+                bengaluruTime: "06:15",
+                statusCategory: "Delayed",
+                statusDetail: "Delayed by 15 mins (Heavy Rain)",
+                trackingUrl: "https://maps.google.com/?q=14.2300,75.0200"
+            },
+            {
+                id: "bus_3",
+                routeNo: "RT-03",
+                routeName: "Sirsi ➔ Ranebennur ➔ Chitradurga ➔ Bengaluru (Majestic)",
+                busNo: "KA 31 FA 1008",
+                sirsiTime: "21:00",
+                bengaluruTime: "05:00",
+                statusCategory: "En-Route",
+                statusDetail: "Crossed Chitradurga Toll",
+                trackingUrl: "https://maps.google.com/?q=14.2251,76.3980"
+            }
+        ];
+
+        // State variables
+        let busList = [];
+        let isAdminLoggedIn = false;
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadBusData();
+            startLiveClock();
+            renderBusCards();
+        });
+
+        // Load data from LocalStorage or default
+        function loadBusData() {
+            const saved = localStorage.getItem('shreekumar_buses');
+            if (saved) {
+                try {
+                    busList = JSON.parse(saved);
+                } catch (e) {
+                    busList = [...initialBusData];
+                }
+            } else {
+                busList = [...initialBusData];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('shreekumar_buses', JSON.stringify(busList));
+        }
+
+        // Live Clock Component
+        function startLiveClock() {
+            function updateClock() {
+                const now = new Date();
+                const clockEl = document.getElementById('liveClock');
+                const dateEl = document.getElementById('liveDate');
+                
+                if (clockEl) {
+                    clockEl.textContent = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                }
+                if (dateEl) {
+                    dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // Calculate time duration between Sirsi departure and Bengaluru arrival
+        function calculateDuration(time1, time2) {
+            if (!time1 || !time2) return "N/A";
+            const [h1, m1] = time1.split(':').map(Number);
+            const [h2, m2] = time2.split(':').map(Number);
+            
+            let startMins = h1 * 60 + m1;
+            let endMins = h2 * 60 + m2;
+
+            if (endMins < startMins) {
+                endMins += 24 * 60; // Overnight shift
+            }
+
+            const diff = endMins - startMins;
+            const hours = Math.floor(diff / 60);
+            const mins = diff % 60;
+            return `${hours}h ${mins > 0 ? mins + 'm' : ''}`;
+        }
+
+        // Format 24hr time string to 12hr AM/PM
+        function format12Hr(timeStr) {
+            if (!timeStr) return '';
+            const [h, m] = timeStr.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${m < 10 ? '0' + m : m} ${ampm}`;
+        }
+
+        // Render Cards
+        function renderBusCards() {
+            const container = document.getElementById('busCardsContainer');
+            const emptyState = document.getElementById('emptyState');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            const statusFilterVal = document.getElementById('statusFilter').value;
+
+            // Filter logic
+            const filtered = busList.filter(bus => {
+                const matchesSearch = bus.routeNo.toLowerCase().includes(searchVal) ||
+                                      bus.busNo.toLowerCase().includes(searchVal) ||
+                                      bus.routeName.toLowerCase().includes(searchVal) ||
+                                      bus.statusDetail.toLowerCase().includes(searchVal);
+                
+                const matchesStatus = (statusFilterVal === 'ALL') || (bus.statusCategory === statusFilterVal);
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Update stats
+            document.getElementById('statActiveBuses').textContent = busList.length;
+            document.getElementById('statOnTime').textContent = busList.filter(b => b.statusCategory === 'On Time').length;
+            document.getElementById('routeCountTag').textContent = `${filtered.length} Services`;
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach(bus => {
+                const duration = calculateDuration(bus.sirsiTime, bus.bengaluruTime);
+                
+                // Status badge styling logic
+                let ledClass = 'led-green';
+                let badgeBg = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                
+                if (bus.statusCategory === 'Delayed') {
+                    ledClass = 'led-orange';
+                    badgeBg = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                } else if (bus.statusCategory === 'En-Route') {
+                    ledClass = 'led-blue';
+                    badgeBg = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+                } else if (bus.statusCategory === 'Departed') {
+                    ledClass = 'led-green';
+                    badgeBg = 'bg-teal-500/10 text-teal-400 border-teal-500/20';
+                }
+
+                const cardHtml = `
+                    <div class="glass-card rounded-3xl p-5 flex flex-col justify-between relative overflow-hidden">
+                        <!-- Top Header: Route No & Bus Plate -->
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-ndot text-sm px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                                        ${escapeHtml(bus.routeNo)}
+                                    </span>
+                                    <span class="text-xs font-mono font-semibold bg-gray-800 text-gray-300 px-2 py-1 rounded-lg border border-gray-700">
+                                        ${escapeHtml(bus.busNo)}
+                                    </span>
+                                </div>
+
+                                <!-- Status Badge -->
+                                <div class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium border ${badgeBg}">
+                                    <span class="led-dot ${ledClass}"></span>
+                                    <span>${escapeHtml(bus.statusCategory)}</span>
+                                </div>
+                            </div>
+
+                            <!-- Route Stoppages -->
+                            <div class="text-xs text-gray-300 font-medium mb-4 flex items-start gap-1.5">
+                                <i class="fa-solid fa-map-pin text-cyan-400 mt-0.5"></i>
+                                <span>${escapeHtml(bus.routeName)}</span>
+                            </div>
+
+                            <!-- Schedule & Timing Grid -->
+                            <div class="bg-gray-900/80 rounded-2xl p-3.5 mb-4 border border-gray-800/80">
+                                <div class="flex items-center justify-between relative">
+                                    
+                                    <!-- Departure Sirsi -->
+                                    <div class="text-left">
+                                        <div class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Leaves Sirsi</div>
+                                        <div class="font-ndot text-lg text-cyan-300 mt-0.5">${format12Hr(bus.sirsiTime)}</div>
+                                    </div>
+
+                                    <!-- Duration Pill in middle -->
+                                    <div class="flex flex-col items-center px-2">
+                                        <span class="text-[10px] font-ndot bg-gray-800 text-cyan-400 px-2 py-0.5 rounded-full border border-gray-700">
+                                            ${duration}
+                                        </span>
+                                        <div class="w-16 h-[1px] bg-gradient-to-r from-cyan-500/20 via-cyan-400/80 to-cyan-500/20 my-1"></div>
+                                        <i class="fa-solid fa-chevron-right text-[10px] text-cyan-400"></i>
+                                    </div>
+
+                                    <!-- Arrival Bengaluru -->
+                                    <div class="text-right">
+                                        <div class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Bengaluru 1st Stop</div>
+                                        <div class="font-ndot text-lg text-emerald-300 mt-0.5">${format12Hr(bus.bengaluruTime)}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Today's Live Status Detail -->
+                            <div class="text-xs text-gray-400 mb-5 flex items-center gap-1.5 bg-gray-800/40 px-3 py-2 rounded-xl">
+                                <i class="fa-solid fa-circle-info text-cyan-400 text-xs"></i>
+                                <span class="truncate"><strong class="text-gray-300">Status:</strong> ${escapeHtml(bus.statusDetail)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Actions Area -->
+                        <div class="pt-2 border-t border-gray-800/80 flex items-center justify-between gap-2">
+                            <!-- Public Live Tracking Redirect Button (Raw URL hidden) -->
+                            <button onclick="redirectToTracker('${bus.id}')" class="w-full bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-gray-950 font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition duration-200 shadow-md shadow-cyan-500/10">
+                                <i class="fa-solid fa-location-arrow text-sm"></i>
+                                <span>Track Live Bus Location</span>
+                            </button>
+
+                            <!-- Admin Editing Controls (Only visible when unlocked) -->
+                            ${isAdminLoggedIn ? `
+                                <div class="flex items-center space-x-1 shrink-0">
+                                    <button onclick="openBusModal('${bus.id}')" title="Edit Bus" class="p-2.5 bg-gray-800 hover:bg-cyan-950 text-cyan-400 rounded-xl border border-gray-700 transition">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="deleteBus('${bus.id}')" title="Delete Bus" class="p-2.5 bg-gray-800 hover:bg-red-950 text-red-400 rounded-xl border border-gray-700 transition">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // REDIRECT / HIDDEN TRACKING URL FUNCTION
+        // Crucial requirement: Viewer never sees raw tracking URL printed in DOM or source code plain text
+        function redirectToTracker(busId) {
+            const bus = busList.find(b => b.id === busId);
+            if (bus && bus.trackingUrl) {
+                // Open tracking link securely in background tab
+                window.open(bus.trackingUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                alert("Tracking link currently updating for this vehicle. Please check back shortly.");
+            }
+        }
+
+        // ADMIN MODAL LOGIC
+        function toggleAdminModal() {
+            if (isAdminLoggedIn) {
+                // Logout Admin
+                isAdminLoggedIn = false;
+                document.getElementById('adminLockIcon').className = 'fa-solid fa-lock text-cyan-400';
+                document.getElementById('adminBtnText').textContent = 'Admin Login';
+                document.getElementById('statAdminStatus').textContent = 'LOCKED';
+                document.getElementById('statAdminStatus').className = 'font-ndot text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 inline-block mt-1';
+                document.getElementById('addBusBtn').classList.add('hidden');
+                renderBusCards();
+            } else {
+                // Open Pin Modal
+                document.getElementById('adminModal').classList.remove('hidden');
+                document.getElementById('adminPinInput').value = '';
+                document.getElementById('adminErrorMsg').classList.add('hidden');
+            }
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('adminPinInput').value.trim();
+            // Default Admin PIN is '1234'
+            if (pin === '1234') {
+                isAdminLoggedIn = true;
+                document.getElementById('adminModal').classList.add('hidden');
+                document.getElementById('adminLockIcon').className = 'fa-solid fa-lock-open text-emerald-400';
+                document.getElementById('adminBtnText').textContent = 'Admin (Unlocked)';
+                document.getElementById('statAdminStatus').textContent = 'UNLOCKED';
+                document.getElementById('statAdminStatus').className = 'font-ndot text-xs px-2 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50 inline-block mt-1';
+                document.getElementById('addBusBtn').classList.remove('hidden');
+                renderBusCards();
+            } else {
+                document.getElementById('adminErrorMsg').classList.remove('hidden');
+            }
+        }
+
+        // ADD / EDIT BUS FORM MODAL LOGIC
+        function openBusModal(busId = null) {
+            const modal = document.getElementById('busFormModal');
+            const title = document.getElementById('formModalTitle');
+            
+            if (busId) {
+                // Edit existing bus
+                const bus = busList.find(b => b.id === busId);
+                if (!bus) return;
+                
+                title.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit Bus Schedule';
+                document.getElementById('editBusId').value = bus.id;
+                document.getElementById('routeNoInput').value = bus.routeNo;
+                document.getElementById('busNoInput').value = bus.busNo;
+                document.getElementById('routeNameInput').value = bus.routeName;
+                document.getElementById('sirsiTimeInput').value = bus.sirsiTime;
+                document.getElementById('bengaluruTimeInput').value = bus.bengaluruTime;
+                document.getElementById('statusCategoryInput').value = bus.statusCategory;
+                document.getElementById('statusDetailInput').value = bus.statusDetail;
+                document.getElementById('trackingUrlInput').value = bus.trackingUrl;
+            } else {
+                // Add new bus
+                title.innerHTML = '<i class="fa-solid fa-bus-simple"></i> Add Today\'s Bus Schedule';
+                document.getElementById('editBusId').value = '';
+                document.getElementById('routeNoInput').value = 'RT-0' + (busList.length + 1);
+                document.getElementById('busNoInput').value = 'KA 31 F ';
+                document.getElementById('routeNameInput').value = 'Sirsi ➔ Haveri ➔ Tumakuru ➔ Bengaluru';
+                document.getElementById('sirsiTimeInput').value = '21:30';
+                document.getElementById('bengaluruTimeInput').value = '05:30';
+                document.getElementById('statusCategoryInput').value = 'On Time';
+                document.getElementById('statusDetailInput').value = 'On Time';
+                document.getElementById('trackingUrlInput').value = 'https://maps.google.com/';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeBusModal() {
+            document.getElementById('busFormModal').classList.add('hidden');
+        }
+
+        function saveBusSchedule(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editBusId').value;
+
+            const busData = {
+                id: editId ? editId : 'bus_' + Date.now(),
+                routeNo: document.getElementById('routeNoInput').value.trim(),
+                busNo: document.getElementById('busNoInput').value.trim().toUpperCase(),
+                routeName: document.getElementById('routeNameInput').value.trim(),
+                sirsiTime: document.getElementById('sirsiTimeInput').value,
+                bengaluruTime: document.getElementById('bengaluruTimeInput').value,
+                statusCategory: document.getElementById('statusCategoryInput').value,
+                statusDetail: document.getElementById('statusDetailInput').value.trim(),
+                trackingUrl: document.getElementById('trackingUrlInput').value.trim()
+            };
+
+            if (editId) {
+                const idx = busList.findIndex(b => b.id === editId);
+                if (idx !== -1) busList[idx] = busData;
+            } else {
+                busList.push(busData);
+            }
+
+            saveToLocalStorage();
+            renderBusCards();
+            closeBusModal();
+        }
+
+        function deleteBus(busId) {
+            if (confirm("Are you sure you want to remove this bus schedule from today's list?")) {
+                busList = busList.filter(b => b.id !== busId);
+                saveToLocalStorage();
+                renderBusCards();
+            }
+        }
+
+        // Helper function for HTML escaping
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
